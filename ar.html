@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>Transparent Notification UI</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #000;
+    }
+
+    .screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .bg {
+      position: absolute;
+      inset: 0;
+      background: url("background.png") center center / cover no-repeat;
+    }
+
+    .dim {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.12);
+      pointer-events: none;
+    }
+
+    .notification-wrap {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 35px;
+      height: 260px;
+      overflow: hidden;
+    }
+
+    .notification-scroll {
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      padding: 0 16px;
+      scrollbar-width: none;
+    }
+
+    .notification-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .empty-text {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  z-index: 1;
+  font-size: 18px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.62);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s linear;
+  white-space: nowrap;
+}
+
+    .spacer {
+      width: 100%;
+      height: 180px;
+      flex-shrink: 0;
+    }
+
+    .notice {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 380px;
+      min-height: 55px;
+      margin: 0 auto;
+      border-radius: 22px;
+      padding: 11px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255, 255, 255, 0.002);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(3px) saturate(150%);
+      box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      object-fit: cover;
+      flex-shrink: 0;
+      margin-left: -7px;
+    }
+
+    .notice-body {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 0;
+    }
+
+    .amount {
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .time {
+      font-size: 13px;
+      opacity: 0.85;
+      white-space: nowrap;
+      flex-shrink: 0;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .desc {
+      font-size: 15px;
+      opacity: 0.9;
+      white-space: nowrap;
+      flex-shrink: 0;
+      color: rgba(255, 255, 255, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <div class="bg"></div>
+    <div class="dim"></div>
+
+    <div class="notification-wrap">
+        <div class="empty-text" id="emptyText">오래된 알림 없음</div>
+      
+        <div class="notification-scroll" id="notificationScroll">
+          <div class="spacer top"></div>
+      
+          <div class="notice">
+            <img class="thumb" src="thumb-money.jpg" alt="">
+            <div class="notice-body">
+              <div class="top-row">
+                <div class="amount">12,000,000원 입금</div>
+                <div class="time">2분 전</div>
+              </div>
+              <div class="desc">리브업 → 내 토스뱅크 통장 (토스뱅크 알림)</div>
+            </div>
+          </div>
+      
+          <div class="spacer bottom"></div>
+        </div>
+      </div>
+
+      <script>
+        const el = document.getElementById('notificationScroll');
+        const emptyText = document.getElementById('emptyText');
+        
+        let homeScrollTop = 0;
+        let animFrame = null;
+        let releaseTimer = null;
+        
+        function setHomePosition() {
+  const max = el.scrollHeight - el.clientHeight;
+
+  // 알림 기본 위치를 아래쪽으로 다시 맞춤
+  homeScrollTop = Math.max(max - 180, 0);
+
+  el.scrollTop = homeScrollTop;
+  updateEmptyText();
+}
+        function easeOutCubic(t) {
+          return 1 - Math.pow(1 - t, 3);
+        }
+        
+        function animateTo(target, duration = 520) {
+          if (animFrame) cancelAnimationFrame(animFrame);
+        
+          const start = el.scrollTop;
+          const distance = target - start;
+          const startTime = performance.now();
+        
+          function step(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = easeOutCubic(progress);
+        
+            el.scrollTop = start + distance * eased;
+            updateEmptyText();
+        
+            if (progress < 1) {
+              animFrame = requestAnimationFrame(step);
+            } else {
+              animFrame = null;
+            }
+          }
+        
+          animFrame = requestAnimationFrame(step);
+        }
+        
+        function updateEmptyText() {
+          // 알림을 위로 올릴수록 값이 커짐
+          const revealed = el.scrollTop - homeScrollTop;
+        
+          let progress = revealed / 45;
+        
+          if (progress < 0) progress = 0;
+          if (progress > 1) progress = 1;
+        
+          emptyText.style.opacity = progress;
+        }
+        
+        function returnToBottom() {
+          const diff = Math.abs(el.scrollTop - homeScrollTop);
+          if (diff < 2) return;
+          animateTo(homeScrollTop, 520);
+        }
+        
+        requestAnimationFrame(setHomePosition);
+        window.addEventListener('resize', setHomePosition);
+        
+        el.addEventListener('scroll', updateEmptyText, { passive: true });
+        
+        el.addEventListener('touchstart', () => {
+          if (animFrame) {
+            cancelAnimationFrame(animFrame);
+            animFrame = null;
+          }
+          clearTimeout(releaseTimer);
+        }, { passive: true });
+        
+        el.addEventListener('touchend', () => {
+          clearTimeout(releaseTimer);
+          releaseTimer = setTimeout(() => {
+            returnToBottom();
+          }, 80);
+        }, { passive: true });
+        
+        el.addEventListener('mouseup', () => {
+          clearTimeout(releaseTimer);
+          releaseTimer = setTimeout(() => {
+            returnToBottom();
+          }, 80);
+        });
+        </script>
+</body>
+</html>
