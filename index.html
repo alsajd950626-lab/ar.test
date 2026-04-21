@@ -24,22 +24,18 @@
     }
 
 .screen {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  padding-top: env(safe-area-inset-top);
-  overflow: hidden;
-}
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
 
-.bg {
-  position: absolute;
-  top: calc(-1 * env(safe-area-inset-top));
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(100% + env(safe-area-inset-top));
-  background: url("backback.png") center / cover no-repeat;
-}
+    .bg {
+      position: absolute;
+      inset: 0;
+      background: url("background.png") center center / cover no-repeat;
+    }
+
 
     .dim {
       position: absolute;
